@@ -21,68 +21,89 @@ vectorizer = joblib.load('vectorizer.pkl')
 
 # Helper function to load messages from the database.json file
 def load_messages():
+    print("Loading messages from database...")
     if os.path.exists(database_file):
         with open(database_file, 'r') as file:
             try:
-                return json.load(file)
+                messages = json.load(file)
+                print("Messages loaded successfully.")
+                return messages
             except json.JSONDecodeError:
-                # Handle if the file is empty or corrupted
+                print("Error loading messages: File is empty or corrupted. Returning default structure.")
                 return {'user1': [], 'user2': []}
     else:
-        # If the file doesn't exist, create a new structure
+        print("Database file not found. Creating new structure.")
         return {'user1': [], 'user2': []}
 
 # Helper function to save messages to the database.json file
 def save_messages(messages):
+    print("Saving messages to database...")
     with open(database_file, 'w') as file:
         json.dump(messages, file, indent=4)
+    print("Messages saved successfully.")
 
 # Phishing Detection Function
 def classify_message(message):
+    print(f"Classifying message: {message}")
     vector = vectorizer.transform([message])
     prediction = model.predict(vector)
-    return "unsafe" if prediction[0] == 1 else "safe"
+    classification = "unsafe" if prediction[0] == 1 else "safe"
+    print(f"Message classification: {classification}")
+    return classification
 
 # Encrypt a message using AES and generate a new IV per message
 def encrypt_message(message, key):
+    print(f"Encrypting message: {message}")
     iv = os.urandom(16)  # Generate a new IV for each message
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(message.encode('utf-8')) + encryptor.finalize()
-    return iv + ciphertext  # Prepend the IV to the ciphertext
+    encrypted_message = iv + ciphertext  # Prepend the IV to the ciphertext
+    print(f"Message encrypted: {encrypted_message.hex()}")
+    return encrypted_message
 
 # Decrypt a message using AES
 def decrypt_message(ciphertext, key):
+    print(f"Decrypting message: {ciphertext.hex()}")
     iv = ciphertext[:16]  # Extract the IV from the first 16 bytes
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     decrypted_message = decryptor.update(ciphertext[16:]) + decryptor.finalize()
+    print(f"Message decrypted: {decrypted_message.decode('utf-8')}")
     return decrypted_message.decode('utf-8')
 
 # HMAC signing for integrity
 def hmac_sign(key, message):
+    print("Signing message with HMAC...")
     hmac = HMAC(key, hashes.SHA256(), backend=default_backend())
     hmac.update(message)
-    return hmac.finalize()
+    signature = hmac.finalize()
+    print(f"Message signed: {signature.hex()}")
+    return signature
 
 # HMAC verification
 def hmac_verify(key, message, signature):
+    print("Verifying HMAC signature...")
     hmac = HMAC(key, hashes.SHA256(), backend=default_backend())
     hmac.update(message)
     try:
         hmac.verify(signature)
+        print("HMAC verification successful.")
         return True
     except:
+        print("HMAC verification failed.")
         return False
 
 # Route for user1 to send a message
 @app.route('/send_message_user1', methods=['POST'])
 def send_message_user1():
     data = request.json
+    print(f"Received message from User 1: {data}")
     message = data['message']
 
     # Phishing Detection
     if classify_message(message) == "unsafe":
+        print("Message classified as unsafe. Not sent.")
         return jsonify({'status': 'Message classified as unsafe. Not sent.'}), 400
 
     # Encrypt the message
@@ -104,16 +125,19 @@ def send_message_user1():
     # Save the updated messages back to the JSON file
     save_messages(messages)
 
+    print("Message from User 1 sent to User 2.")
     return jsonify({'status': 'Message sent and encrypted!', 'encrypted_message': encrypted_message.hex()}), 200
 
 # Route for user2 to send a message
 @app.route('/send_message_user2', methods=['POST'])
 def send_message_user2():
     data = request.json
+    print(f"Received message from User 2: {data}")
     message = data['message']
 
     # Phishing Detection
     if classify_message(message) == "unsafe":
+        print("Message classified as unsafe. Not sent.")
         return jsonify({'status': 'Message classified as unsafe. Not sent.'}), 400
 
     # Encrypt the message
@@ -135,19 +159,19 @@ def send_message_user2():
     # Save the updated messages back to the JSON file
     save_messages(messages)
 
+    print("Message from User 2 sent to User 1.")
     return jsonify({'status': 'Message sent and encrypted!', 'encrypted_message': encrypted_message.hex()}), 200
 
 # Route for user1 to receive messages
 @app.route('/receive_messages_user1', methods=['GET'])
 def receive_messages_user1():
-    # Load messages from the JSON file
+    print("Retrieving messages for User 1...")
     messages = load_messages()
     user1_messages = messages['user1']
     decrypted_messages = []
 
     for msg in user1_messages:
         if not msg['retrieved']:
-            # Convert back from hex to bytes
             encrypted_message = bytes.fromhex(msg['encrypted_message'])
             signature = bytes.fromhex(msg['signature'])
 
@@ -158,25 +182,22 @@ def receive_messages_user1():
             else:
                 decrypted_messages.append("Message integrity compromised!")
 
-            # Mark message as retrieved
             msg['retrieved'] = True
 
-    # Save the updated messages back to the JSON file
     save_messages(messages)
-
+    print(f"Messages retrieved for User 1: {decrypted_messages}")
     return jsonify({'decrypted_messages': decrypted_messages}), 200
 
 # Route for user2 to receive messages
 @app.route('/receive_messages_user2', methods=['GET'])
 def receive_messages_user2():
-    # Load messages from the JSON file
+    print("Retrieving messages for User 2...")
     messages = load_messages()
     user2_messages = messages['user2']
     decrypted_messages = []
 
     for msg in user2_messages:
         if not msg['retrieved']:
-            # Convert back from hex to bytes
             encrypted_message = bytes.fromhex(msg['encrypted_message'])
             signature = bytes.fromhex(msg['signature'])
 
@@ -187,13 +208,12 @@ def receive_messages_user2():
             else:
                 decrypted_messages.append("Message integrity compromised!")
 
-            # Mark message as retrieved
             msg['retrieved'] = True
 
-    # Save the updated messages back to the JSON file
     save_messages(messages)
-
+    print(f"Messages retrieved for User 2: {decrypted_messages}")
     return jsonify({'decrypted_messages': decrypted_messages}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, ssl_context=('cert.pem', 'key.pem'))
+    print("Starting Flask server...")
+    app.run(host='0.0.0.0', port=5000)  # Removed ssl_context

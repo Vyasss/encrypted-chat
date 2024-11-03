@@ -5,75 +5,32 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Encrypted Messaging UI</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            padding: 20px;
-        }
-        .container {
-            display: flex;
-            justify-content: space-evenly;
-            margin: 20px;
-        }
-        .user-box {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            width: 40%;
-        }
-        h2 {
-            text-align: center;
-        }
-        textarea {
-            width: 100%;
-            height: 100px;
-            padding: 10px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            padding: 10px;
-            width: 100%;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            margin-bottom: 10px;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        .messages {
-            background-color: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            min-height: 100px;
-            white-space: pre-wrap;
-        }
+        body { font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; }
+        .container { display: flex; justify-content: space-evenly; margin: 20px; }
+        .user-box { background-color: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1); width: 40%; }
+        h2 { text-align: center; }
+        textarea { width: 100%; height: 100px; padding: 10px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #007bff; color: white; padding: 10px; width: 100%; border: none; border-radius: 4px; cursor: pointer; margin-bottom: 10px; }
+        button:hover { background-color: #0056b3; }
+        .messages { background-color: #f9f9f9; padding: 10px; border: 1px solid #ddd; border-radius: 4px; min-height: 100px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <!-- User 1 Section -->
         <div class="user-box">
             <h2>User 1</h2>
             <textarea id="user1_message" placeholder="Enter your message..."></textarea>
             <button onclick="sendMessageUser1()">Send Message to User 2</button>
-            <button onclick="receiveMessagesUser1()">Retrieve Messages</button>
+            <button onclick="receiveMessagesUser1(event)">Retrieve Messages</button>
             <div id="user1_messages" class="messages"></div>
         </div>
 
-        <!-- User 2 Section -->
         <div class="user-box">
             <h2>User 2</h2>
             <textarea id="user2_message" placeholder="Enter your message..."></textarea>
             <button onclick="sendMessageUser2()">Send Message to User 1</button>
-            <button onclick="receiveMessagesUser2()">Retrieve Messages</button>
+            <button onclick="receiveMessagesUser2(event)">Retrieve Messages</button>
             <div id="user2_messages" class="messages"></div>
         </div>
     </div>
@@ -81,44 +38,32 @@
     <script>
         const baseUrl = 'http://127.0.0.1:5000';
 
-        // Send message from User 1 to User 2
         function sendMessageUser1() {
             const message = document.getElementById('user1_message').value;
             fetch(`${baseUrl}/send_message_user1`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message })
             })
             .then(response => response.json())
-            .then(data => {
-                alert('Message sent from User 1 to User 2!');
-                document.getElementById('user1_message').value = '';  // Clear the input field
-            })
+            .then(data => { alert('Message sent from User 1 to User 2!'); document.getElementById('user1_message').value = ''; })
             .catch(error => console.error('Error:', error));
         }
 
-        // Send message from User 2 to User 1
         function sendMessageUser2() {
             const message = document.getElementById('user2_message').value;
             fetch(`${baseUrl}/send_message_user2`, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ message: message })
             })
             .then(response => response.json())
-            .then(data => {
-                alert('Message sent from User 2 to User 1!');
-                document.getElementById('user2_message').value = '';  // Clear the input field
-            })
+            .then(data => { alert('Message sent from User 2 to User 1!'); document.getElementById('user2_message').value = ''; })
             .catch(error => console.error('Error:', error));
         }
 
-        // Retrieve messages for User 1
-        function receiveMessagesUser1() {
+        function receiveMessagesUser1(event) {
+            event.preventDefault();
             fetch(`${baseUrl}/receive_messages_user1`)
             .then(response => response.json())
             .then(data => {
@@ -128,8 +73,8 @@
             .catch(error => console.error('Error:', error));
         }
 
-        // Retrieve messages for User 2
-        function receiveMessagesUser2() {
+        function receiveMessagesUser2(event) {
+            event.preventDefault();
             fetch(`${baseUrl}/receive_messages_user2`)
             .then(response => response.json())
             .then(data => {
