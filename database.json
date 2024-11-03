@@ -1,0 +1,26 @@
+{
+    "user1": [
+        {
+            "encrypted_message": "10d514d551ff39988101ca3f9f01198b1f39",
+            "signature": "c9f90e250cfdcc3d9b9f644da0ba49e63be0ce4417359cf6fbbf4e406115b956",
+            "retrieved": true
+        },
+        {
+            "encrypted_message": "9539e7db6482bfc246269bad298dc54d68b121e8a46a1a38",
+            "signature": "3d198a4f34181fce6d08ccf209ce61a65fb70bd6bd163352b9453b5d0fd972ec",
+            "retrieved": true
+        }
+    ],
+    "user2": [
+        {
+            "encrypted_message": "03b84dbf2fea5ef721ac60ebeb919d0fe9c1",
+            "signature": "720f20e9e6a80a65a5c9a80315dc6a420f428fa78d239ecafca8a2c97b7d8ebd",
+            "retrieved": true
+        },
+        {
+            "encrypted_message": "aaf00ce4e7e98c516a8825ce38a88ae82db5643170339aede65f65",
+            "signature": "df15f132f89616dd72349aaa9dbabc330d7f0765bf7601f2abe803aeb6bb2742",
+            "retrieved": true
+        }
+    ]
+}
