@@ -5,19 +5,31 @@ from cryptography.hazmat.primitives.hmac import HMAC
 from cryptography.hazmat.primitives import hashes
 import os
 import json
-import joblib  # For loading the phishing detection model
-from flask_cors import CORS  # Import Flask-CORS
+import joblib
+from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
 
-# Symmetric Key Generation (AES-256 key)
-key = os.urandom(32)
+
+KEY_PATH = 'encryption_key.bin'
+
+def get_key():
+    if not os.path.exists(KEY_PATH):
+        with open(KEY_PATH, 'wb') as f:
+            f.write(os.urandom(32))  # AES-256 key
+    with open(KEY_PATH, 'rb') as f:
+        return f.read()
+
+key = get_key()
 database_file = 'database.json'
 
 # Load phishing model and vectorizer
 model = joblib.load('phishing_model.pkl')
 vectorizer = joblib.load('vectorizer.pkl')
+
+# Threshold for phishing classification (70%)
+PHISHING_THRESHOLD = 0.7
 
 # Helper function to load messages from the database.json file
 def load_messages():
@@ -42,13 +54,14 @@ def save_messages(messages):
         json.dump(messages, file, indent=4)
     print("Messages saved successfully.")
 
-# Phishing Detection Function
-def classify_message(message):
+# Phishing Detection Function with Threshold
+def classify_message(message, threshold=PHISHING_THRESHOLD):
     print(f"Classifying message: {message}")
     vector = vectorizer.transform([message])
-    prediction = model.predict(vector)
-    classification = "unsafe" if prediction[0] == 1 else "safe"
-    print(f"Message classification: {classification}")
+    probabilities = model.predict_proba(vector)[0]
+    phishing_probability = probabilities[1]  # Probability for class '1' (phishing)
+    classification = "unsafe" if phishing_probability >= threshold else "safe"
+    print(f"Message classification: {classification} with phishing probability: {phishing_probability}")
     return classification
 
 # Encrypt a message using AES and generate a new IV per message
@@ -58,7 +71,7 @@ def encrypt_message(message, key):
     cipher = Cipher(algorithms.AES(key), modes.CFB(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     ciphertext = encryptor.update(message.encode('utf-8')) + encryptor.finalize()
-    encrypted_message = iv + ciphertext  # Prepend the IV to the ciphertext
+    encrypted_message = iv + ciphertext  
     print(f"Message encrypted: {encrypted_message.hex()}")
     return encrypted_message
 
@@ -98,12 +111,10 @@ def hmac_verify(key, message, signature):
 @app.route('/send_message_user1', methods=['POST'])
 def send_message_user1():
     data = request.json
-    print(f"Received message from User 1: {data}")
     message = data['message']
 
     # Phishing Detection
     if classify_message(message) == "unsafe":
-        print("Message classified as unsafe. Not sent.")
         return jsonify({'status': 'Message classified as unsafe. Not sent.'}), 400
 
     # Encrypt the message
@@ -125,19 +136,16 @@ def send_message_user1():
     # Save the updated messages back to the JSON file
     save_messages(messages)
 
-    print("Message from User 1 sent to User 2.")
     return jsonify({'status': 'Message sent and encrypted!', 'encrypted_message': encrypted_message.hex()}), 200
 
 # Route for user2 to send a message
 @app.route('/send_message_user2', methods=['POST'])
 def send_message_user2():
     data = request.json
-    print(f"Received message from User 2: {data}")
     message = data['message']
 
     # Phishing Detection
     if classify_message(message) == "unsafe":
-        print("Message classified as unsafe. Not sent.")
         return jsonify({'status': 'Message classified as unsafe. Not sent.'}), 400
 
     # Encrypt the message
@@ -159,13 +167,11 @@ def send_message_user2():
     # Save the updated messages back to the JSON file
     save_messages(messages)
 
-    print("Message from User 2 sent to User 1.")
     return jsonify({'status': 'Message sent and encrypted!', 'encrypted_message': encrypted_message.hex()}), 200
 
 # Route for user1 to receive messages
 @app.route('/receive_messages_user1', methods=['GET'])
 def receive_messages_user1():
-    print("Retrieving messages for User 1...")
     messages = load_messages()
     user1_messages = messages['user1']
     decrypted_messages = []
@@ -185,13 +191,11 @@ def receive_messages_user1():
             msg['retrieved'] = True
 
     save_messages(messages)
-    print(f"Messages retrieved for User 1: {decrypted_messages}")
     return jsonify({'decrypted_messages': decrypted_messages}), 200
 
 # Route for user2 to receive messages
 @app.route('/receive_messages_user2', methods=['GET'])
 def receive_messages_user2():
-    print("Retrieving messages for User 2...")
     messages = load_messages()
     user2_messages = messages['user2']
     decrypted_messages = []
@@ -211,9 +215,7 @@ def receive_messages_user2():
             msg['retrieved'] = True
 
     save_messages(messages)
-    print(f"Messages retrieved for User 2: {decrypted_messages}")
     return jsonify({'decrypted_messages': decrypted_messages}), 200
 
 if __name__ == '__main__':
-    print("Starting Flask server...")
-    app.run(host='0.0.0.0', port=5000)  # Removed ssl_context
+    app.run(host='0.0.0.0', port=5000)

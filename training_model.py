@@ -1,44 +1,54 @@
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+from sklearn.naive_bayes import MultinomialNB
 import joblib
 
-# Expanded synthetic dataset with balanced sample phishing and safe messages
-messages = [
-    "Please click this link to reset your password immediately.",  # Phishing
-    "You have won a prize. Click here to claim it.",               # Phishing
-    "Let’s catch up for lunch tomorrow.",                          # Safe
-    "Your account has been compromised. Provide your login details here.",  # Phishing
-    "The meeting is scheduled for 3 PM today.",                    # Safe
-    "We detected unusual activity on your account. Verify here.",  # Phishing
-    "Don't forget to submit the project by tomorrow.",             # Safe
-    "Congratulations on your new job!",                            # Safe
-    "Update your contact information for the upcoming event.",     # Safe
-    "Urgent: verify your account to avoid suspension.",            # Phishing
-    "Our meeting is at 2 PM in the main office.",                  # Safe
-    "Get exclusive access to deals by clicking this link.",        # Phishing
+# Improved dataset with a variety of safe and phishing messages
+safe_messages = [
+    "Let's meet up tomorrow for coffee.",
+    "How are you doing?",
+    "Just checking in to see if everything is okay.",
+    "Meeting is scheduled for 3 PM. Please confirm.",
+    "Here's the link to the project files.",
+    "Reminder: The deadline for submission is next Friday.",
+    "Your package will arrive soon.",
+    "Can we have a call later today?",
+    "Congratulations on your promotion!",
+    "Here's the summary of the project we discussed.",
+    "Thank you for your assistance on this matter.",
+    "Please see the attached report.",
+    "Looking forward to our meeting tomorrow.",
 ]
 
-# Labels indicating phishing (1) or safe (0)
-labels = [1, 1, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1]  # Balanced dataset
+phishing_messages = [
+    "Please reset your password immediately by clicking this link.",
+    "You have won $1000! Click here to claim.",
+    "Your account has been compromised. Provide login details now.",
+    "Urgent! Verify your account by transferring funds.",
+    "Congratulations, you've been selected. Click here to learn more.",
+    "Immediate action required: Confirm your account.",
+    "We detected suspicious activity in your account. Act now!",
+    "You have a limited time to claim your prize. Don't miss out!",
+    "Update your billing information to avoid service disruption.",
+    "Your bank account is at risk! Log in here to secure it.",
+    "Unusual activity detected. Verify your identity here.",
+    "Click here to receive your cash reward.",
+    "Your order could not be completed. Update your info here.",
+]
 
-# Train a simple phishing detection model
-vectorizer = TfidfVectorizer()
+# Combine safe and phishing messages into a single dataset
+messages = safe_messages + phishing_messages
+labels = [0] * len(safe_messages) + [1] * len(phishing_messages)  # 0 for safe, 1 for phishing
+
+# Use TfidfVectorizer with n-grams for better context capture
+vectorizer = TfidfVectorizer(ngram_range=(1, 2), stop_words='english')  # Unigrams and bigrams
 X = vectorizer.fit_transform(messages)
 
-# Split data into training and testing to evaluate performance
-X_train, X_test, y_train, y_test = train_test_split(X, labels, test_size=0.3, random_state=42)
+# Train a Naive Bayes classifier for text classification
+model = MultinomialNB()
+model.fit(X, labels)
 
-# Initialize Logistic Regression with higher regularization to prevent overfitting
-model = LogisticRegression(C=0.5)  # C < 1 increases regularization
-model.fit(X_train, y_train)
-
-# Check model performance
-train_accuracy = model.score(X_train, y_train)
-test_accuracy = model.score(X_test, y_test)
-print(f"Training Accuracy: {train_accuracy * 100:.2f}%")
-print(f"Test Accuracy: {test_accuracy * 100:.2f}%")
-
-# Save the model and vectorizer
+# Save the trained model and vectorizer
 joblib.dump(model, 'phishing_model.pkl')
 joblib.dump(vectorizer, 'vectorizer.pkl')
+
+print("Model and vectorizer saved successfully!")
